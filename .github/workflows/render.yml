@@ -42,15 +42,25 @@ jobs:
         run: |
           manim -qm scene.py PyramidDocumentary -o output.mp4
 
+      - name: Upload Finished Video (Backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: autonomous-video
+          path: media/videos/**/*.mp4
+          retention-days: 3
+
       - name: Send Video & Script to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           VIDEO_FILE=$(find media/videos -name "*.mp4" | head -n 1)
           
-          # Discord allows up to 25MB. A 5-min 720p mp4 usually fits.
+          # Compress the video using FFmpeg to guarantee it falls under Discord's 25MB limit
+          ffmpeg -i "$VIDEO_FILE" -vcodec libx264 -crf 28 -preset fast compressed_video.mp4
+          
+          # Send the newly compressed video to Discord
           curl -H "Content-Type: multipart/form-data" \
-               -F "file1=@$VIDEO_FILE" \
+               -F "file1=@compressed_video.mp4" \
                -F "file2=@script.txt" \
                -F "payload_json={\"content\": \"🚀 **5-Minute Documentary Complete!**\\nLandscape 16:9 | Full Audio Sync | Dynamic Chapters:\"}" \
                $DISCORD_WEBHOOK
