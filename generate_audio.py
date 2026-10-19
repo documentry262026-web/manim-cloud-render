@@ -3,7 +3,6 @@ import json
 import wave
 import subprocess
 
-# Your exact 24-line Hindi script mapped to the 24 visual sequences
 SCRIPT_LINES = [
     # [00:00 - 01:00] Intro & Giza Hook
     "क्या आपने कभी सोचा है कि हज़ारों साल पहले, जब आज जैसी मशीनें नहीं थीं, तब इतनी बड़ी-बड़ी पिरामिड्स कैसे बनाई गईं?",
@@ -41,44 +40,52 @@ SCRIPT_LINES = [
     "ये हमें बताते हैं कि बिना मॉडर्न टेक्नोलॉजी के भी इंसान कितने बड़े और मुश्किल काम कर सकता था। पिरामिड्स सिर्फ़ पत्थरों से बनी इमारतें नहीं हैं। ये इंसानी दिमाग, मेहनत और इंजीनियरिंग की ताकत का एक शानदार उदाहरण हैं। और शायद यही वजह है कि आज भी दुनिया भर के लोग इन्हें देखकर हैरान रह जाते हैं।"
 ]
 
-# Save full script for reference
 with open("script.txt", "w", encoding="utf-8") as f:
     f.write("\n\n".join(SCRIPT_LINES))
 
 durations = []
 segment_files = []
-PAUSE_SEC = 0.45  # Natural breathing pause between sentences
+PAUSE_SEC = 0.45
 
 print("Generating sentence-by-sentence audio with Piper TTS...")
 
 for i, line in enumerate(SCRIPT_LINES):
     seg_file = f"seg_{i}.wav"
-    # length_scale 1.12 gives a dramatic documentary storytelling pace
     cmd = ["piper", "-m", "hi.onnx", "--length_scale", "1.12", "-f", seg_file]
     subprocess.run(cmd, input=line.encode("utf-8"), check=True)
     segment_files.append(seg_file)
 
-# Combine all segments into one master voiceover.wav & record exact timings
 with wave.open(segment_files[0], "rb") as first_wav:
     params = first_wav.getparams()
     framerate = first_wav.getframerate()
     sampwidth = first_wav.getsampwidth()
     nchannels = first_wav.getnchannels()
 
-silence_frames = b"\x00" * int(framerate * PAUSE_SEC * sampwidth * nchannels)
+# Calculate whole frames FIRST so byte length is always a multiple of (sampwidth * nchannels)
+pause_frames = int(framerate * PAUSE_SEC)
+frame_size = sampwidth * nchannels
+silence_frames = b"\x00" * (pause_frames * frame_size)
 
-with wave.open("voiceover.wav", "wb") as out_wav:
+with wave.open("raw_voiceover.wav", "wb") as out_wav:
     out_wav.setparams(params)
     for seg_file in segment_files:
         with wave.open(seg_file, "rb") as in_wav:
             nframes = in_wav.getnframes()
             data = in_wav.readframes(nframes)
-            out_wav.writeframes(data)
+            # Ensure data is strictly aligned to frame_size
+            valid_len = (len(data) // frame_size) * frame_size
+            out_wav.writeframes(data[:valid_len])
             out_wav.writeframes(silence_frames)
-            
-            seg_duration = (nframes / float(framerate)) + PAUSE_SEC
+
+            seg_duration = (nframes / float(framerate)) + (pause_frames / float(framerate))
             durations.append(round(seg_duration, 3))
         os.remove(seg_file)
+
+# Convert to standard 44.1kHz 16-bit stereo PCM for Manim's pydub mixer
+subprocess.run([
+    "ffmpeg", "-y", "-i", "raw_voiceover.wav",
+    "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", "voiceover.wav"
+], check=True)
 
 with open("durations.json", "w") as f:
     json.dump(durations, f)
