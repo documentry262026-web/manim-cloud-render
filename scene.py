@@ -1,102 +1,103 @@
+import urllib.request
 from manim import *
 import random
 
-class SpaceMystery(MovingCameraScene):
+class EasySpaceMystery(MovingCameraScene):
     def construct(self):
-        # 1. SETUP: Dark Cinematic Atmosphere
-        self.camera.background_color = "#050608"
+        # 1. SETUP & BACKGROUND
+        self.camera.background_color = "#020305"
         
-        # 2. STARFIELD PARTICLES
+        # Download real image of Earth from Wikipedia
+        image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg"
+        image_path = "earth.jpg"
+        try:
+            urllib.request.urlretrieve(image_url, image_path)
+            earth = ImageMobject(image_path).scale(1.5)
+        except:
+            # Fallback if download fails
+            earth = Circle(radius=2, color=BLUE, fill_opacity=1)
+            
+        earth.move_to(ORIGIN)
+        
+        # Particles (Starfield)
         stars = VGroup(*[
             Dot(
                 point=[random.uniform(-7, 7), random.uniform(-14, 14), 0],
-                radius=random.uniform(0.01, 0.03),
-                color=random.choice([WHITE, LIGHT_GREY, BLUE_E, YELLOW_E]),
+                radius=random.uniform(0.01, 0.04),
+                color=random.choice([WHITE, LIGHT_GREY, BLUE_C]),
                 fill_opacity=random.uniform(0.2, 0.8)
-            ) for _ in range(250)
+            ) for _ in range(150)
         ])
         self.add(stars)
-        self.wait(1)
+        self.wait(2)
         
-        # 3. DOCUMENTARY UI / RADAR GRID
-        grid = NumberPlane(
-            x_range=[-8, 8, 1], y_range=[-15, 15, 1],
-            background_line_style={"stroke_color": TEAL, "stroke_width": 1, "stroke_opacity": 0.2}
+        # 2. THE HOOK (Text Animations)
+        title_top = Text("WHAT HAPPENS IF", font="sans-serif", color=WHITE, weight=BOLD).scale(0.9).to_edge(UP, buff=2)
+        title_bot = Text("WE SQUEEZE THE EARTH?", font="sans-serif", color=YELLOW, weight=BOLD).scale(0.9).next_to(title_top, DOWN, buff=0.2)
+        
+        self.play(FadeIn(title_top, shift=DOWN), run_time=1.5)
+        self.play(FadeIn(title_bot, shift=UP), run_time=1.5)
+        self.wait(2.5)
+        
+        # 3. SHOW THE REAL EARTH
+        self.play(FadeIn(earth, scale=0.5), run_time=2)
+        
+        earth_label = Text("Mass: 6 BILLION TRILLION TONS", font="sans-serif", color=LIGHT_GREY).scale(0.5).next_to(earth, DOWN, buff=0.8)
+        self.play(Write(earth_label), run_time=2)
+        self.wait(3.5)
+        
+        # 4. THE COMPRESSION METAPHOR
+        self.play(FadeOut(title_top), FadeOut(title_bot), FadeOut(earth_label), run_time=1)
+        
+        metaphor_text = Text("If we compress all that mass...", font="sans-serif", color=WHITE).scale(0.7).to_edge(UP, buff=2.5)
+        self.play(Write(metaphor_text), run_time=2)
+        self.wait(2.5)
+        
+        # Visual: Shrinking the Earth into a tiny dot while camera zooms in
+        marble = Dot(color=YELLOW, radius=0.08)
+        
+        self.play(
+            Transform(earth, marble),
+            self.camera.frame.animate.scale(0.3).move_to(ORIGIN),
+            run_time=4.5,
+            rate_func=rate_functions.ease_in_out_cubic
         )
-        self.play(Create(grid, run_time=3, lag_ratio=0.1))
-        
-        target_text = Text("TARGET: CYGNUS X-1 [BLACK HOLE]", font="Courier New", color=RED).scale(0.5).to_corner(UL)
-        self.play(Write(target_text), run_time=1)
-        self.wait(1)
-
-        # 4. CINEMATIC TITLES
-        title = Text("THE EVENT HORIZON", font="Courier New", weight=BOLD).scale(0.9)
-        subtitle = Text("A Space Mystery", font="Courier New", color=BLUE).scale(0.6)
-        header = VGroup(title, subtitle).arrange(DOWN, buff=0.2).move_to(UP * 5)
-        
-        self.play(Write(title, run_time=2))
-        self.play(FadeIn(subtitle, shift=UP), run_time=1)
         self.wait(2)
-
-        # 5. THE MYSTERY OBJECT: ACCRETION DISK (GLOW)
-        black_hole_center = Circle(radius=0.8, color=BLACK, fill_opacity=1)
         
-        disk = VGroup()
-        colors = [ORANGE, RED_E, YELLOW_D]
-        for i in range(12):
-            ring = Ellipse(width=4.5 + i*0.25, height=1.5 + i*0.1, color=colors[i%3], stroke_opacity=0.8 - i*0.06, stroke_width=4 + i)
-            disk.add(ring)
-            
-        bh_group = VGroup(disk, black_hole_center).move_to(DOWN * 1.5)
+        # Because camera is zoomed in (scale 0.3), we must scale text way down!
+        marble_label = Text("Down to the size of a MARBLE", font="sans-serif", color=RED, weight=BOLD).scale(0.18).next_to(earth, UP, buff=0.1)
+        self.play(FadeIn(marble_label, shift=UP*0.05), run_time=2)
+        self.wait(3.5)
         
-        # Animate Accretion Disk entry
-        self.play(FadeIn(disk, scale=0.5), FadeIn(black_hole_center), run_time=3)
+        # 5. THE MIND-BENDING REVEAL
+        reveal_text1 = Text("Gravity becomes infinite.", font="sans-serif", color=WHITE).scale(0.12).next_to(marble_label, UP, buff=0.2)
+        reveal_text2 = Text("IT BECOMES A BLACK HOLE.", font="sans-serif", color=YELLOW, weight=BOLD).scale(0.16).next_to(reveal_text1, UP, buff=0.08)
         
-        # Add continuous rotation to the disk
-        disk.add_updater(lambda m, dt: m.rotate(dt * 0.4))
+        self.play(Write(reveal_text1), run_time=2)
+        self.play(FadeIn(reveal_text2, scale=1.5), run_time=2)
         self.wait(2)
-
-        # 6. MATHEMATICAL OVERLAY
-        formula = MathTex(r"r_s", r"=", r"\frac{2GM}{c^2}").scale(1.5).next_to(bh_group, UP, buff=2)
-        formula[0].set_color(RED)     # r_s
-        formula[2].set_color(YELLOW)  # 2GM/c^2
         
-        formula_label = Text("Schwarzschild Radius", font="Courier New", color=WHITE).scale(0.5).next_to(formula, DOWN)
-        box = SurroundingRectangle(VGroup(formula, formula_label), color=BLUE, buff=0.4, corner_radius=0.2)
+        # Transform the yellow marble into a glowing black hole
+        black_hole = Circle(radius=0.08, color=BLACK, fill_opacity=1)
+        ring = Ellipse(width=0.4, height=0.1, color=ORANGE, stroke_width=2).move_to(black_hole)
+        ring.rotate(PI/8)
         
-        self.play(Write(formula), run_time=2)
-        self.play(FadeIn(formula_label), Create(box), run_time=1.5)
-        self.wait(1)
-
-        # 7. NARRATIVE TEXT
-        narrative = Text(
-            "Beyond this threshold,\nspace and time swap roles.\nNot even light escapes.", 
-            font="Courier New", 
-            color=LIGHT_GREY, 
-            line_spacing=1.5
-        ).scale(0.5).next_to(box, UP, buff=0.8)
-
-        self.play(Write(narrative), run_time=4)
+        self.play(
+            Transform(earth, black_hole),
+            FadeIn(ring),
+            run_time=2
+        )
+        ring.add_updater(lambda m, dt: m.rotate(dt * 2)) # Spinning accretion disk
         self.wait(4)
-
-        # 8. CINEMATIC ZOOM TO THE SINGULARITY
+        
+        # 6. OUTRO
         self.play(
-            FadeOut(header), FadeOut(target_text), FadeOut(narrative), 
-            FadeOut(formula), FadeOut(formula_label), FadeOut(box),
-            run_time=1.5
+            FadeOut(earth), FadeOut(ring), FadeOut(marble_label), 
+            FadeOut(reveal_text1), FadeOut(reveal_text2), FadeOut(metaphor_text),
+            run_time=2
         )
-        
-        singularity_text = Text("ERROR: SINGULARITY REACHED", font="Courier New", color=RED).scale(0.04).move_to(bh_group.get_center())
-        
-        self.play(
-            self.camera.frame.animate.scale(0.05).move_to(bh_group.get_center()),
-            run_time=5,
-            rate_func=rate_functions.ease_in_sine
-        )
-        
-        self.play(Write(singularity_text), run_time=1)
-        self.wait(2)
-        
-        # 9. OUTRO FADE
-        self.play(FadeOut(singularity_text), FadeOut(disk), FadeOut(black_hole_center), FadeOut(grid), FadeOut(stars), run_time=2)
         self.wait(1)
+        
+        outro_text = Text("What else is hiding in space?", font="sans-serif", color=LIGHT_GREY, weight=BOLD).scale(0.15)
+        self.play(Write(outro_text), run_time=2)
+        self.wait(4)
