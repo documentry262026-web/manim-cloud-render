@@ -9,7 +9,7 @@ class PyramidDocumentary(MovingCameraScene):
     def run_seq(self, total_time, steps, focus_mob=None):
         """
         Executes a list of animation lambdas across total_time.
-        Guarantees NO step takes longer than 1.6s by injecting active micro-animations
+        Guarantees NO step takes longer than 1.5s by injecting active micro-animations
         (Flashes, Pulses, Camera Micro-Zooms) so the screen is NEVER still.
         """
         n = len(steps)
@@ -21,7 +21,6 @@ class PyramidDocumentary(MovingCameraScene):
             step_fn(rt)
             elapsed += rt
 
-        # Fill any remaining audio time in this sentence with <1.2s active visual pulses
         toggle = 0
         while total_time - elapsed > 0.15:
             chunk = min(1.1, total_time - elapsed)
@@ -293,8 +292,8 @@ class PyramidDocumentary(MovingCameraScene):
 
         self.run_seq(D[12], [
             lambda rt: self.play(FadeIn(r_sled, scale=0.7), run_time=rt),
-            lambda rt: self.play(MoveAlongPath(r_sled, ramp_line), run_time=rt * 1.4, rate_func=linear),
-            lambda rt: self.play(Flash(r_sled.get_center(), color=YELLOW, flash_radius=1.0), run_time=rt * 0.6),
+            lambda rt: self.play(MoveAlongPath(r_sled, ramp_line), run_time=rt, rate_func=linear),
+            lambda rt: self.play(Flash(r_sled.get_center(), color=YELLOW, flash_radius=1.0), run_time=rt),
         ], focus_mob=r_sled)
 
         # Line 13: आज भी यह पूरी तरह साफ़ नहीं है कि कौन-सा तरीका इस्तेमाल हुआ था
@@ -351,7 +350,7 @@ class PyramidDocumentary(MovingCameraScene):
 
         # Line 16: मैथ्स और ज्योमेट्री का भी इस्तेमाल (Wireframe & 51.5° Angle!)
         st4 = LEFT * 22
-        math_title = Text("MATHEMATICS & SACRED GEOMETRY", font="sans-serif", color=CYAN, weight=BOLD).scale(0.75).move_to(st4 + UP * 2.8)
+        math_title = Text("MATHEMATICS & SACRED GEOMETRY", font="sans-serif", color=TEAL_A, weight=BOLD).scale(0.75).move_to(st4 + UP * 2.8)
         wf_pyr = Triangle(color=GOLD, stroke_width=5).scale(2.5).move_to(st4 + DOWN * 0.6)
         v_axis = DashedLine(wf_pyr.get_top(), [wf_pyr.get_top()[0], wf_pyr.get_bottom()[1], 0], color=WHITE)
         angle_arc = Arc(radius=0.85, start_angle=0, angle=0.9, arc_center=wf_pyr.get_left() + DOWN * 0.02, color=RED, stroke_width=6)
@@ -474,7 +473,7 @@ class PyramidDocumentary(MovingCameraScene):
 
         # Line 23: आर्कियोलॉजी और साइंस... हज़ारों साल बाद भी खड़े हैं
         st5_scan = st5 + RIGHT * 16
-        sc_title = Text("MODERN SCIENCE & ARCHAEOLOGY", font="sans-serif", color=CYAN, weight=BOLD).scale(0.8).move_to(st5_scan + UP * 2.8)
+        sc_title = Text("MODERN SCIENCE & ARCHAEOLOGY", font="sans-serif", color=TEAL_A, weight=BOLD).scale(0.8).move_to(st5_scan + UP * 2.8)
         xray_pyr = Triangle(color=WHITE, stroke_width=5).scale(2.4).move_to(st5_scan + DOWN * 0.5)
         chambers = VGroup(
             Rectangle(width=1.1, height=0.45, color=YELLOW, fill_opacity=0.9).move_to(st5_scan + DOWN * 0.3),
@@ -491,7 +490,6 @@ class PyramidDocumentary(MovingCameraScene):
         ], focus_mob=chambers)
 
         # Line 24: FINALE — Flying Block Swarm, Glowing Capstone & CTA!
-        self.camera.frame.move_to(ORIGIN)
         swarm = VGroup(*[
             Square(side_length=0.22, color=GOLD, fill_opacity=0.85).move_to(
                 ORIGIN + [random.uniform(-7, 7), random.uniform(-4, 4), 0]
@@ -504,7 +502,7 @@ class PyramidDocumentary(MovingCameraScene):
         cta_msg = Text("LIKE & SUBSCRIBE FOR MORE MYSTERIES!", font="sans-serif", weight=BOLD, color=RED).scale(0.8).move_to(DOWN * 3.4)
 
         self.run_seq(D[24], [
-            lambda rt: self.play(FadeIn(swarm), run_time=rt),
+            lambda rt: self.play(self.camera.frame.animate.move_to(ORIGIN), FadeIn(swarm), run_time=rt),
             lambda rt: self.play(*[s.animate.move_to(capstone_pos).set_opacity(0) for s in swarm], run_time=rt, rate_func=rate_functions.ease_in_expo),
             lambda rt: self.play(FadeIn(capstone, scale=1.5), FadeIn(glow_ring), run_time=rt),
             lambda rt: self.play(glow_ring.animate.scale(3.2).set_opacity(0), Write(final_msg), run_time=rt),
