@@ -1,10 +1,10 @@
-name: Render Vertical Space Mystery
+name: Render Vertical Pyramid Documentary
 
 on:
-  workflow_dispatch: # Allows you to manually trigger the render
+  workflow_dispatch: 
   push:
     paths:
-      - 'scene.py'   # Automatically runs when you save changes to scene.py
+      - 'scene.py'   
 
 jobs:
   render:
@@ -29,11 +29,24 @@ jobs:
 
       - name: Render Vertical Video
         run: |
-          manim -qh -r 1080,1920 scene.py EasySpaceMystery -o output.mp4
+          manim -qh -r 1080,1920 scene.py PyramidMystery -o output.mp4
 
-      - name: Upload Finished Video
+      - name: Send Video Directly to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          # Find the exact mp4 file that Manim just created
+          VIDEO_FILE=$(find media/videos -name "*.mp4" | head -n 1)
+          
+          # Use curl to upload the file to your Discord server
+          curl -H "Content-Type: multipart/form-data" \
+               -F "file1=@$VIDEO_FILE" \
+               -F "payload_json={\"content\": \"🎬 **New Documentary Short Ready!** Here is the Pyramid Mystery video:\"}" \
+               $DISCORD_WEBHOOK
+
+      - name: Upload to GitHub Artifacts (Backup)
         uses: actions/upload-artifact@v4
         with:
-          name: space-mystery-short
+          name: pyramid-mystery-short
           path: media/videos/**/*.mp4
           retention-days: 3
