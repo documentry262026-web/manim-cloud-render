@@ -1,4 +1,4 @@
-name: Render Vertical Pyramid Documentary
+name: Autonomous AI Video Pipeline
 
 on:
   workflow_dispatch: 
@@ -18,35 +18,45 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install System Dependencies (FFmpeg & LaTeX)
+      - name: Install System Dependencies
         run: |
           sudo apt update
           sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev texlive texlive-latex-extra
 
-      - name: Install Manim
+      - name: Install Python Packages (Manim, Gemini, Piper TTS)
         run: |
-          pip install manim
+          pip install manim google-generativeai piper-tts
+
+      - name: Download Piper Hindi Voice Model
+        run: |
+          wget -qO hi.onnx https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/swara/medium/hi_IN-swara-medium.onnx
+          wget -qO hi.onnx.json https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/swara/medium/hi_IN-swara-medium.onnx.json
+
+      - name: Generate Script and Audio
+        env:
+          GOOGLE_API: ${{ secrets.GOOGLE_API }}
+        run: |
+          python generate_audio.py
 
       - name: Render Vertical Video
         run: |
           manim -qh -r 1080,1920 scene.py PyramidMystery -o output.mp4
 
-      - name: Send Video Directly to Discord
+      - name: Upload Finished Video
+        uses: actions/upload-artifact@v4
+        with:
+          name: autonomous-video
+          path: media/videos/**/*.mp4
+          retention-days: 3
+
+      - name: Send Video & Script to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          # Find the exact mp4 file that Manim just created
           VIDEO_FILE=$(find media/videos -name "*.mp4" | head -n 1)
           
-          # Use curl to upload the file to your Discord server
           curl -H "Content-Type: multipart/form-data" \
                -F "file1=@$VIDEO_FILE" \
-               -F "payload_json={\"content\": \"🎬 **New Documentary Short Ready!** Here is the Pyramid Mystery video:\"}" \
+               -F "file2=@script.txt" \
+               -F "payload_json={\"content\": \"🚀 **AI Render Complete!**\\nHere is the 90-second Manim video with the Piper TTS Hindi voiceover, and the Gemini script attached below:\"}" \
                $DISCORD_WEBHOOK
-
-      - name: Upload to GitHub Artifacts (Backup)
-        uses: actions/upload-artifact@v4
-        with:
-          name: pyramid-mystery-short
-          path: media/videos/**/*.mp4
-          retention-days: 3
