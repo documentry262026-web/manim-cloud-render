@@ -1,10 +1,10 @@
 name: Render Vertical Space Mystery
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Allows you to manually trigger the render
   push:
     paths:
-      - 'scene.py'
+      - 'scene.py'   # Automatically runs when you save changes to scene.py
 
 jobs:
   render:
@@ -29,7 +29,7 @@ jobs:
 
       - name: Render Vertical Video
         run: |
-          manim -qh -r 1080,1920 scene.py SpaceMystery -o output.mp4
+          manim -qh -r 1080,1920 scene.py EasySpaceMystery -o output.mp4
 
       - name: Upload Finished Video
         uses: actions/upload-artifact@v4
