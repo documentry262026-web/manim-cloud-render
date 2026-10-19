@@ -27,10 +27,11 @@ jobs:
         run: |
           pip install manim google-generativeai piper-tts
 
-    - name: Download Piper Hindi Voice Model
+      - name: Download Piper Hindi Voice Model
         run: |
           wget -qO hi.onnx https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx
           wget -qO hi.onnx.json https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx.json
+
       - name: Generate Script and Audio
         env:
           GOOGLE_API: ${{ secrets.GOOGLE_API }}
