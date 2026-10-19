@@ -1,10 +1,11 @@
-name: 5-Minute Documentary Pipeline
+name: Synced Documentary Pipeline
 
 on:
   workflow_dispatch: 
   push:
     paths:
-      - 'scene.py'   
+      - 'scene.py'
+      - 'generate_audio.py'
 
 jobs:
   render:
@@ -21,46 +22,43 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt update
-          sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev texlive texlive-latex-extra
+          sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev
 
-      - name: Install Python Packages
+      - name: Install Python Packages (Manim & Piper TTS)
         run: |
-          pip install manim google-generativeai piper-tts
+          pip install manim piper-tts
 
       - name: Download Piper Hindi Voice Model
         run: |
           wget -qO hi.onnx https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx
           wget -qO hi.onnx.json https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx.json
 
-      - name: Generate AI Audio & Calculate Duration
-        env:
-          GOOGLE_API: ${{ secrets.GOOGLE_API }}
+      - name: Generate Synced Sentence-by-Sentence Audio
         run: |
           python generate_audio.py
 
-      - name: Render 16:9 Landscape Video (720p for 5-min stability)
+      - name: Render 16:9 Landscape Documentary
         run: |
           manim -qm scene.py PyramidDocumentary -o output.mp4
 
-      - name: Upload Finished Video (Backup)
+      - name: Upload Full Quality Video to GitHub Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: autonomous-video
+          name: pyramid-documentary-hd
           path: media/videos/**/*.mp4
-          retention-days: 3
+          retention-days: 5
 
-      - name: Send Video & Script to Discord
+      - name: Compress & Send Video to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          VIDEO_FILE=$(find media/videos -name "*.mp4" | head -n 1)
+          VIDEO_FILE=$(find media/videos -name "output.mp4" | head -n 1)
           
-          # Compress the video using FFmpeg to guarantee it falls under Discord's 25MB limit
-          ffmpeg -i "$VIDEO_FILE" -vcodec libx264 -crf 28 -preset fast compressed_video.mp4
+          # Compress audio & video so it stays well under Discord's 25MB limit
+          ffmpeg -y -i "$VIDEO_FILE" -vcodec libx264 -crf 28 -preset fast -acodec aac -b:a 96k compressed_video.mp4
           
-          # Send the newly compressed video to Discord
           curl -H "Content-Type: multipart/form-data" \
                -F "file1=@compressed_video.mp4" \
                -F "file2=@script.txt" \
-               -F "payload_json={\"content\": \"🚀 **5-Minute Documentary Complete!**\\nLandscape 16:9 | Full Audio Sync | Dynamic Chapters:\"}" \
+               -F "payload_json={\"content\": \"🎬 **100% Synced Pyramid Documentary Ready!**\\n16:9 Landscape | Sentence-by-Sentence Sync | Zero Static Frames:\"}" \
                $DISCORD_WEBHOOK
