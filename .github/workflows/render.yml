@@ -1,4 +1,4 @@
-name: Autonomous AI Video Pipeline
+name: 5-Minute Documentary Pipeline
 
 on:
   workflow_dispatch: 
@@ -23,7 +23,7 @@ jobs:
           sudo apt update
           sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev texlive texlive-latex-extra
 
-      - name: Install Python Packages (Manim, Gemini, Piper TTS)
+      - name: Install Python Packages
         run: |
           pip install manim google-generativeai piper-tts
 
@@ -32,22 +32,15 @@ jobs:
           wget -qO hi.onnx https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx
           wget -qO hi.onnx.json https://huggingface.co/rhasspy/piper-voices/resolve/main/hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx.json
 
-      - name: Generate Script and Audio
+      - name: Generate AI Audio & Calculate Duration
         env:
           GOOGLE_API: ${{ secrets.GOOGLE_API }}
         run: |
           python generate_audio.py
 
-      - name: Render Vertical Video
+      - name: Render 16:9 Landscape Video (720p for 5-min stability)
         run: |
-          manim -qh -r 1080,1920 scene.py PyramidMystery -o output.mp4
-
-      - name: Upload Finished Video
-        uses: actions/upload-artifact@v4
-        with:
-          name: autonomous-video
-          path: media/videos/**/*.mp4
-          retention-days: 3
+          manim -qm scene.py PyramidDocumentary -o output.mp4
 
       - name: Send Video & Script to Discord
         env:
@@ -55,8 +48,9 @@ jobs:
         run: |
           VIDEO_FILE=$(find media/videos -name "*.mp4" | head -n 1)
           
+          # Discord allows up to 25MB. A 5-min 720p mp4 usually fits.
           curl -H "Content-Type: multipart/form-data" \
                -F "file1=@$VIDEO_FILE" \
                -F "file2=@script.txt" \
-               -F "payload_json={\"content\": \"🚀 **AI Render Complete!**\\nHere is the 90-second Manim video with the Piper TTS Hindi voiceover, and the Gemini script attached below:\"}" \
+               -F "payload_json={\"content\": \"🚀 **5-Minute Documentary Complete!**\\nLandscape 16:9 | Full Audio Sync | Dynamic Chapters:\"}" \
                $DISCORD_WEBHOOK
