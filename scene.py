@@ -4,170 +4,105 @@ import random
 
 class PyramidMystery(MovingCameraScene):
     def construct(self):
-        # ==========================================
-        # SETUP: BACKGROUND & CONTINUOUS MOTION DUST
-        # ==========================================
-        self.camera.background_color = "#0a0602" # Deep desert night/sepia
+        # --- 1. CONSTANT MOTION (SANDSTORM) ---
+        self.camera.background_color = "#140c04" 
         
-        # Create continuous drifting dust/sand particles
-        dust = VGroup()
-        for _ in range(200):
-            d = Dot(radius=random.uniform(0.01, 0.04), color=random.choice([YELLOW_E, GOLD_E, WHITE]), fill_opacity=random.uniform(0.2, 0.6))
-            d.move_to([random.uniform(-8, 8), random.uniform(-15, 15), 0])
-            d.vx = random.uniform(-0.3, 0.3)
-            d.vy = random.uniform(-0.3, 0.3)
-            # This updater guarantees the particles NEVER stop moving
-            d.add_updater(lambda m, dt: m.shift(RIGHT * m.vx * dt + UP * m.vy * dt))
-            dust.add(d)
+        sand_particles = VGroup(*[
+            Dot(
+                radius=random.uniform(0.01, 0.04), 
+                color=random.choice([YELLOW_A, GOLD_E, ORANGE]), 
+                fill_opacity=random.uniform(0.3, 0.8)
+            ) for _ in range(200)
+        ])
+        
+        for s in sand_particles:
+            s.move_to([random.uniform(-8, 8), random.uniform(-15, 15), 0])
             
-        self.add(dust)
-
-        # ==========================================
-        # SCENE 1: THE HOOK & REAL IMAGE
-        # ==========================================
-        # Download image WITH a User-Agent so Wikipedia doesn't block it!
+        def update_sand(mob, dt):
+            for s in mob:
+                s.shift(LEFT * dt * random.uniform(1.5, 3.5) + DOWN * dt * random.uniform(0.2, 1.0))
+                if s.get_x() < -6:
+                    s.set_x(6)
+                if s.get_y() < -12:
+                    s.set_y(12)
+                    
+        sand_particles.add_updater(update_sand)
+        self.add(sand_particles)
+        
+        # --- 2. DOWNLOAD REAL IMAGE ---
         image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Kheops-Pyramid.jpg/800px-Kheops-Pyramid.jpg"
         image_path = "pyramid.jpg"
+        
+        req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
         try:
-            req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req) as response, open(image_path, 'wb') as out_file:
                 out_file.write(response.read())
-            pyramid_img = ImageMobject(image_path).scale(2.5)
+            real_pyramid = ImageMobject(image_path).scale(2.5)
         except:
-            pyramid_img = Triangle(color=GOLD, fill_opacity=0.5).scale(4)
+            real_pyramid = Triangle(color=GOLD, fill_opacity=0.5).scale(3)
+            
+        real_pyramid.move_to(ORIGIN)
 
-        pyramid_img.move_to(DOWN * 2)
+        # --- 3. THE HOOK ---
+        title1 = Text("HOW DID THEY", font="sans-serif", weight=BOLD, color=WHITE).scale(1.2).to_edge(UP, buff=2)
+        title2 = Text("BUILD THIS?", font="sans-serif", weight=BOLD, color=GOLD).scale(1.5).next_to(title1, DOWN, buff=0.2)
         
-        # Add continuous slow zoom to the image so it is NEVER still
-        pyramid_img.add_updater(lambda m, dt: m.scale(1 + 0.02 * dt))
+        # Continuous camera slow zoom in
+        self.camera.frame.add_updater(lambda m, dt: m.scale(1 - 0.015 * dt))
         
-        self.play(FadeIn(pyramid_img), run_time=2)
+        self.play(FadeIn(title1, shift=DOWN), run_time=1.5)
+        self.play(FadeIn(title2, shift=UP), FadeIn(real_pyramid, scale=0.8), run_time=2)
+        self.wait(2.5)
         
-        title_top = Text("HOW DID THEY", font="sans-serif", color=WHITE, weight=BOLD).scale(0.9).to_edge(UP, buff=2)
-        title_bot = Text("BUILD THIS?", font="sans-serif", color=YELLOW, weight=BOLD).scale(1.2).next_to(title_top, DOWN, buff=0.2)
-        
-        # Keep everything moving while writing text
-        self.play(Write(title_top), self.camera.frame.animate.shift(DOWN * 0.5), run_time=2)
-        self.play(FadeIn(title_bot, shift=UP), self.camera.frame.animate.shift(DOWN * 0.5), run_time=2)
-        
-        # Slow pan instead of a static wait
-        self.play(self.camera.frame.animate.scale(0.9).shift(DOWN * 0.5), run_time=3)
-
-        # ==========================================
-        # SCENE 2: THE 2.3 MILLION BLOCKS
-        # ==========================================
-        self.play(FadeOut(pyramid_img), FadeOut(title_top), FadeOut(title_bot), run_time=1.5)
+        # --- 4. THE SLED & RAMP (BUG FIXED!) ---
+        self.play(FadeOut(title1), FadeOut(title2), FadeOut(real_pyramid), run_time=1.5)
         
         # Reset camera
-        self.play(self.camera.frame.animate.move_to(ORIGIN).scale(1/0.9), run_time=1.5)
+        self.camera.frame.clear_updaters()
+        self.play(self.camera.frame.animate.scale(1.2).move_to(ORIGIN), run_time=1)
         
-        block_text1 = Text("2.3 MILLION", font="sans-serif", color=GOLD, weight=BOLD).scale(1.1).to_edge(UP, buff=1.5)
-        block_text2 = Text("STONE BLOCKS", font="sans-serif", color=WHITE).scale(0.8).next_to(block_text1, DOWN)
+        blocks_text = Text("2.5 TON BLOCKS", font="sans-serif", color=WHITE, weight=BOLD).scale(1.2).to_edge(UP, buff=2)
+        self.play(Write(blocks_text), run_time=1.5)
         
-        self.play(Write(block_text1), FadeIn(block_text2, shift=DOWN), run_time=2)
-
-        # Cascading grid of blocks
-        blocks = VGroup(*[Square(side_length=0.4, color=GOLD_E, fill_opacity=0.7) for _ in range(48)])
-        blocks.arrange_in_grid(rows=8, cols=6, buff=0.1).next_to(block_text2, DOWN, buff=1)
+        # Build the ramp as a LINE so it has a .get_angle() attribute
+        ramp_line = Line(DOWN*2 + LEFT*3, UP*1 + RIGHT*2, color=ORANGE, stroke_width=8)
+        ramp_angle = ramp_line.get_angle()
         
-        # Animate blocks falling into place while camera slowly pans down
-        self.play(
-            LaggedStart(*[FadeIn(b, shift=DOWN*2) for b in blocks], lag_ratio=0.05),
-            self.camera.frame.animate.shift(DOWN * 1.5),
-            run_time=4
-        )
-        
-        weight_text = Text("EACH WEIGHING UP TO 15 TONS", font="sans-serif", color=RED_A).scale(0.6).next_to(blocks, DOWN, buff=0.8)
-        
-        # Highlight one block continuously
-        target_block = blocks[20]
-        target_block.add_updater(lambda m, dt: m.rotate(dt * 0.5).set_color(RED))
-        
-        self.play(Write(weight_text), self.camera.frame.animate.scale(0.8).move_to(target_block), run_time=3.5)
-
-        # ==========================================
-        # SCENE 3: THE RAMP METHOD (ANIMATIC)
-        # ==========================================
-        self.play(FadeOut(blocks), FadeOut(block_text1), FadeOut(block_text2), FadeOut(weight_text), run_time=1.5)
-        
-        # Reset camera while moving
-        self.play(self.camera.frame.animate.move_to(ORIGIN).scale(1/0.8), run_time=2)
-        
-        method_text = Text("PULLED ON WOODEN SLEDS", font="sans-serif", color=WHITE).scale(0.7).to_edge(UP, buff=2)
-        self.play(Write(method_text), run_time=1.5)
-        
-        # Draw the Ramp
-        ramp = Polygon(LEFT*3 + DOWN*2, RIGHT*3 + DOWN*2, RIGHT*3 + UP*1, color=LIGHT_GREY, fill_opacity=0.2)
-        self.play(Create(ramp), run_time=2)
-        
-        # Draw the Sled & Block
-        sled = Line(start=LEFT*0.5, end=RIGHT*0.5, color=ORANGE, stroke_width=6)
-        block = Square(side_length=0.8, color=GOLD, fill_opacity=0.9)
+        # Build the Sled and Block
+        sled = Rectangle(width=1.5, height=0.2, color=DARK_BROWN, fill_opacity=1)
+        block = Square(side_length=1.2, color=LIGHT_GREY, fill_opacity=0.9)
         block.next_to(sled, UP, buff=0)
-        sled_group = VGroup(sled, block).move_to(ramp.get_vertices()[0] + UP*0.5)
-        sled_group.rotate(ramp.get_angle())
         
-        rope = Line(sled_group.get_right(), sled_group.get_right() + RIGHT*2 + UP*1, color=WHITE)
+        # Group them, move to the bottom of the ramp, and rotate perfectly
+        sled_group = VGroup(sled, block)
+        sled_group.move_to(ramp_line.get_start())
+        sled_group.rotate(ramp_angle)
         
-        self.play(FadeIn(sled_group), Create(rope), run_time=1.5)
+        self.play(Create(ramp_line), run_time=1.5)
+        self.play(FadeIn(sled_group, scale=0.8), run_time=1)
         
-        # Animate pulling up the ramp
-        pull_group = VGroup(sled_group, rope)
+        # Cinematic pull-in while the sled moves up
         self.play(
-            pull_group.animate.shift(RIGHT*4.5 + UP*2.25), 
-            self.camera.frame.animate.shift(RIGHT*1 + UP*0.5), # Camera follows the pull
+            MoveAlongPath(sled_group, ramp_line),
+            self.camera.frame.animate.scale(0.8).move_to(ramp_line.get_center()),
             run_time=4,
             rate_func=linear
         )
+        self.wait(2)
         
-        # ==========================================
-        # SCENE 4: NIGHT SKY ALIGNMENT
-        # ==========================================
-        self.play(FadeOut(ramp), FadeOut(pull_group), FadeOut(method_text), run_time=1.5)
+        # --- 5. THE CAPSTONE OUTRO ---
+        self.play(FadeOut(blocks_text), FadeOut(ramp_line), FadeOut(sled_group), run_time=1.5)
         
-        # Change to night sky (Turn dust into stars)
-        self.play(
-            self.camera.frame.animate.move_to(UP*2).scale(1.2),
-            dust.animate.set_color(WHITE),
-            run_time=3
-        )
+        self.camera.frame.move_to(ORIGIN)
+        self.camera.frame.add_updater(lambda m, dt: m.scale(1 + 0.02 * dt).shift(UP * dt * 0.2))
         
-        align_text1 = Text("ALIGNED TO TRUE NORTH", font="sans-serif", color=BLUE_A, weight=BOLD).scale(0.8).move_to(UP*5)
-        align_text2 = Text("Margin of error: 0.05 degrees", font="sans-serif", color=LIGHT_GREY).scale(0.5).next_to(align_text1, DOWN)
+        pyramid_base = Triangle(color=GOLD, fill_opacity=0.2).scale(3.5).move_to(DOWN*2)
+        capstone = Triangle(color=YELLOW, fill_opacity=1).scale(0.4).move_to(pyramid_base.get_top() + DOWN*0.2)
+        final_text = Text("PERFECTION.", font="sans-serif", weight=BOLD, color=WHITE).scale(1.5).next_to(pyramid_base, UP, buff=1)
         
-        pyramid_silhouette = Triangle(color=BLACK, fill_opacity=1).scale(3).move_to(DOWN*2)
-        pyramid_glow = Triangle(color=BLUE_E, fill_opacity=0.3).scale(3.1).move_to(DOWN*2)
+        self.play(DrawBorderThenFill(pyramid_base), run_time=2)
+        self.play(FadeIn(capstone, shift=DOWN*2), Write(final_text), run_time=2.5)
         
-        self.play(FadeIn(pyramid_glow), FadeIn(pyramid_silhouette), Write(align_text1), run_time=2.5)
-        self.play(FadeIn(align_text2, shift=UP), run_time=1.5)
-        
-        # Shoot a laser/alignment beam up to the stars
-        beam = Line(pyramid_silhouette.get_top(), pyramid_silhouette.get_top() + UP*8, color=TEAL, stroke_width=4)
-        
-        # Keep zooming out slowly to show scale
-        self.play(
-            Create(beam), 
-            self.camera.frame.animate.scale(1.1).shift(UP*1), 
-            run_time=4
-        )
-        
-        # ==========================================
-        # OUTRO
-        # ==========================================
-        outro = Text("A MYSTERY THAT STILL CAPTIVATES US", font="sans-serif", color=YELLOW).scale(0.6).move_to(UP*1)
-        
-        self.play(
-            FadeIn(outro, shift=UP),
-            self.camera.frame.animate.shift(UP*0.5),
-            run_time=3
-        )
-        
-        # Final fade out
-        self.play(
-            FadeOut(outro), FadeOut(beam), FadeOut(pyramid_silhouette), FadeOut(pyramid_glow),
-            FadeOut(align_text1), FadeOut(align_text2),
-            run_time=2
-        )
-        
-        # Let the dust/stars drift out
-        self.play(self.camera.frame.animate.scale(0.9), run_time=3)
+        # Let the sandstorm blow for a few seconds
+        self.wait(4)
+        self.play(FadeOut(Group(*self.mobjects)), run_time=2)
