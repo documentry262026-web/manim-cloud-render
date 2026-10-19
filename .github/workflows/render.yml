@@ -1,10 +1,10 @@
-name: Render Manim Video
+name: Render Vertical Space Mystery
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Allows you to manually trigger the render
   push:
     paths:
-      - 'scene.py'
+      - 'scene.py'   # Automatically runs when you save changes to scene.py
 
 jobs:
   render:
@@ -18,22 +18,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install System Dependencies
+      - name: Install System Dependencies (FFmpeg & LaTeX)
         run: |
           sudo apt update
-          sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev
+          sudo apt install -y ffmpeg libcairo2-dev libpango1.0-dev texlive texlive-latex-extra
 
       - name: Install Manim
         run: |
           pip install manim
 
-      - name: Render Video
+      - name: Render Vertical Video
         run: |
-          manim -qh scene.py MyFirstAnimation -o output.mp4
+          manim -qh -r 1080,1920 scene.py SpaceMystery -o output.mp4
 
-      - name: Upload Video Artifact
+      - name: Upload Finished Video
         uses: actions/upload-artifact@v4
         with:
-          name: finished-video
+          name: space-mystery-short
           path: media/videos/scene/1080p60/output.mp4
-          retention-days: 1
+          retention-days: 3
