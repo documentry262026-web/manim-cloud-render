@@ -1,40 +1,57 @@
 import os
 import subprocess
+import wave
+import contextlib
 import google.generativeai as genai
 
-# 1. Setup Gemini 3.6 Flash (Falling back gracefully if version is adjusting)
+# 1. Setup Gemini
 genai.configure(api_key=os.environ["GOOGLE_API"])
 try:
     model = genai.GenerativeModel('gemini-3.6-flash')
 except:
     model = genai.GenerativeModel('gemini-1.5-flash')
 
-# 2. Prompt for simple Hindi + English words in Devanagari
+# 2. 5-Minute Documentary Prompt (Hindi + Devanagari English)
 prompt = """
-Write a 90-second documentary video script about 'The Mystery of the Pyramids'.
-Language: Use simple Hindi, but write common English terms in Devanagari (e.g., 'पिरामिड', 'ब्लॉक्स', 'टन', 'इंजीनियरिंग'). 
-Do NOT use highly difficult pure Hindi words. Keep it very conversational and mysterious.
-Output ONLY the spoken text. No brackets, no formatting, no visual instructions. Just the script.
+Write a 5-minute YouTube documentary script about 'The Mystery of the Pyramids'. 
+Structure it clearly:
+1. Heavy Hook (Grab attention immediately)
+2. Chapter 1: The Impossible Scale (Tons of blocks)
+3. Chapter 2: The Orion Alignment (Stars and aliens theory)
+4. Chapter 3: The Secret Chambers (Internal layout)
+5. Conclusion & Call to Action (Ask them to subscribe and like)
+
+Language Rules: Use simple conversational Hindi. Write common English technical or modern words in Devanagari script (e.g., 'स्ट्रक्चर', 'इंजीनियरिंग', 'एलियंस', 'थ्योरी', 'सब्सक्राइब'). Do NOT use highly difficult pure Hindi words.
+Target word count: ~600 to 700 words. 
+Output ONLY the spoken text. No brackets, no formatting, no visual instructions.
 """
 
-print("Generating script with Gemini...")
+print("Generating 5-minute script with Gemini...")
 try:
     response = model.generate_content(prompt)
     script_text = response.text.replace('\n', ' ')
 except Exception as e:
     print(f"Gemini failed: {e}")
-    script_text = "प्राचीन मिस्र के पिरामिड आज भी एक बहुत बड़ा रहस्य हैं। क्या आप जानते हैं कि इन्हें कैसे बनाया गया था? लाखों भारी ब्लॉक्स को बिना किसी मॉडर्न मशीन के रेगिस्तान में ट्रांसपोर्ट किया गया।"
+    script_text = "पिरामिड का रहस्य। सब्सक्राइब करें।"
 
-# Save script for Discord
 with open("script.txt", "w", encoding="utf-8") as f:
     f.write(script_text)
 
 # 3. Generate Audio using Piper TTS
 print("Generating audio with Piper TTS...")
 piper_cmd = f'echo "{script_text}" | piper -m hi.onnx -f voiceover.wav'
-result = subprocess.run(piper_cmd, shell=True)
+subprocess.run(piper_cmd, shell=True)
 
-if result.returncode != 0 or not os.path.exists("voiceover.wav"):
-    print("Piper TTS failed. Fallback: Outputting text script only to Discord.")
-else:
-    print("Voiceover generated successfully!")
+# 4. Measure Audio Duration for Manim Sync!
+audio_duration = 300.0 # Default 5 mins fallback
+if os.path.exists("voiceover.wav"):
+    with contextlib.closing(wave.open("voiceover.wav", 'r')) as f:
+        frames = f.getnframes()
+        rate = f.getframerate()
+        audio_duration = frames / float(rate)
+
+print(f"Audio generated successfully! Total Duration: {audio_duration} seconds.")
+
+# Save duration for Manim to read
+with open("duration.txt", "w") as f:
+    f.write(str(audio_duration))
