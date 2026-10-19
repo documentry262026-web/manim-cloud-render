@@ -3,170 +3,170 @@ import os
 from manim import *
 import random
 
-class PyramidMystery(MovingCameraScene):
+class PyramidDocumentary(MovingCameraScene):
     def construct(self):
-        # --- 1. SETUP & AUDIO ---
+        # --- 1. SYNC WITH DYNAMIC AUDIO DURATION ---
         if os.path.exists("voiceover.wav"):
             self.add_sound("voiceover.wav")
+            
+        try:
+            with open("duration.txt", "r") as f:
+                total_duration = float(f.read())
+        except:
+            total_duration = 300.0 # 5 min fallback
+            
+        # We have 5 main visual phases. We give each phase equal time.
+        # We subtract 10 seconds for transitions/animations to be safe.
+        phase_time = (total_duration / 5.0) - 2.0 
 
-        self.camera.background_color = "#0a0a0a" # Dark cinematic studio
+        # --- 2. THE "NEVER STILL" CINEMATIC UPDATERS ---
+        self.camera.background_color = "#050505"
         
-        # Global Grid Background
-        grid = NumberPlane(x_range=[-30, 30, 1], y_range=[-30, 30, 1],
-                           background_line_style={"stroke_color": DARK_GREY, "stroke_opacity": 0.3})
+        # A. Infinite Global Grid
+        grid = NumberPlane(x_range=[-50, 50, 1], y_range=[-50, 50, 1],
+                           background_line_style={"stroke_color": TEAL, "stroke_opacity": 0.15})
         self.add(grid)
+        
+        # B. Radar Scanner (Sweeps across the screen constantly)
+        radar_line = Line(UP*20, DOWN*20, color=GREEN, stroke_width=2, stroke_opacity=0.3)
+        radar_line.set_x(-15)
+        def update_radar(m, dt):
+            m.shift(RIGHT * dt * 4)
+            if m.get_x() > 15: m.set_x(-15)
+        radar_line.add_updater(update_radar)
+        self.add(radar_line)
 
-        # Global Sandstorm (Never stops moving)
+        # C. Infinite Cinematic Sandstorm
         sand_particles = VGroup(*[
-            Dot(radius=random.uniform(0.01, 0.04), color=random.choice([YELLOW_A, GOLD_E, ORANGE]), fill_opacity=random.uniform(0.3, 0.6)) 
-            for _ in range(300)
+            Dot(radius=random.uniform(0.01, 0.05), color=random.choice([YELLOW_A, GOLD_E, ORANGE]), fill_opacity=random.uniform(0.2, 0.5)) 
+            for _ in range(350)
         ])
         for s in sand_particles:
-            s.move_to([random.uniform(-15, 15), random.uniform(-15, 15), 0])
+            s.move_to([random.uniform(-20, 20), random.uniform(-15, 15), 0])
             
         def update_sand(mob, dt):
-            # The sand stays with the camera!
             cam_center = self.camera.frame.get_center()
             for s in mob:
-                s.shift(LEFT * dt * random.uniform(2, 4) + DOWN * dt * random.uniform(0.5, 1.5))
-                if s.get_x() < cam_center[0] - 10: s.set_x(cam_center[0] + 10)
-                if s.get_y() < cam_center[1] - 15: s.set_y(cam_center[1] + 15)
-                if s.get_y() > cam_center[1] + 15: s.set_y(cam_center[1] - 15)
-                    
+                s.shift(LEFT * dt * random.uniform(2, 5) + DOWN * dt * random.uniform(0.5, 2.0))
+                if s.get_x() < cam_center[0] - 15: s.set_x(cam_center[0] + 15)
+                if s.get_y() < cam_center[1] - 10: s.set_y(cam_center[1] + 10)
         sand_particles.add_updater(update_sand)
         self.add(sand_particles)
 
-        # --- STATION 1: THE HOOK (ORIGIN) [0 - 15s] ---
-        # Image Download
-        image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Kheops-Pyramid.jpg/800px-Kheops-Pyramid.jpg"
+        # --- CHAPTER 1: THE HOOK (ORIGIN) ---
+        # Download real image
         image_path = "pyramid.jpg"
-        req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Kheops-Pyramid.jpg/800px-Kheops-Pyramid.jpg", headers={'User-Agent': 'Mozilla/5.0'})
         try:
-            with urllib.request.urlopen(req) as response, open(image_path, 'wb') as out_file:
-                out_file.write(response.read())
-            pyramid_img = ImageMobject(image_path).scale(2)
+            with urllib.request.urlopen(req) as response, open(image_path, 'wb') as out_file: out_file.write(response.read())
+            img = ImageMobject(image_path).scale(3)
         except:
-            pyramid_img = Triangle(color=GOLD, fill_opacity=0.5).scale(3)
-        pyramid_img.move_to(ORIGIN)
+            img = Triangle(color=GOLD, fill_opacity=0.5).scale(4)
+            
+        title = Text("THE PYRAMID ENIGMA", font="sans-serif", weight=BOLD, color=WHITE).scale(1.5).to_edge(UP)
+        
+        self.play(FadeIn(img, scale=0.8), Write(title), run_time=2)
+        
+        # Camera slowly drifts across the image to keep motion
+        self.camera.frame.add_updater(lambda m, dt: m.scale(1 - 0.002 * dt).shift(RIGHT * dt * 0.1))
+        self.wait(phase_time) # Waits exactly as long as the audio needs!
 
-        coords = Text("29.9792° N, 31.1342° E", font="Courier New", color=GREEN).scale(0.5).to_corner(UL)
-        title1 = Text("THE GREAT MYSTERY", font="sans-serif", weight=BOLD, color=WHITE).scale(1.2).next_to(pyramid_img, UP)
+        # --- CHAPTER 2: THE IMPOSSIBLE SCALE (RIGHT 20) ---
+        station_2 = RIGHT * 20
+        self.camera.frame.clear_updaters()
+        self.play(self.camera.frame.animate.move_to(station_2).scale(1.2), run_time=3)
         
-        self.play(Create(grid), run_time=1.5)
-        self.play(Write(coords), run_time=1)
-        self.play(FadeIn(pyramid_img, scale=0.8), run_time=2)
-        self.play(Write(title1), run_time=1)
+        c1_title = Text("CHAPTER 1: THE SCALE", font="sans-serif", color=YELLOW, weight=BOLD).move_to(station_2 + UP*3.5)
+        self.play(FadeIn(c1_title, shift=DOWN), run_time=1)
         
-        # Dynamic Target ring
-        target = Circle(radius=3, color=RED).move_to(ORIGIN)
-        self.play(Create(target), run_time=1)
-        self.play(target.animate.scale(1.1).set_opacity(0), run_time=1)
+        # Holographic Blueprint Block
+        block = Square(side_length=3, color=BLUE, stroke_width=6).move_to(station_2)
+        grid_block = VGroup(*[Line(block.get_corner(UL) + DOWN*i*0.5, block.get_corner(UR) + DOWN*i*0.5, color=BLUE, stroke_opacity=0.3) for i in range(1, 6)])
+        weight_txt = Text("2,300,000 BLOCKS", font="sans-serif", color=RED).scale(1.2).move_to(station_2)
         
-        self.play(self.camera.frame.animate.scale(0.6), run_time=3)
-        self.wait(1.5)
-        self.play(self.camera.frame.animate.scale(1.5), run_time=2)
-
-        # --- STATION 2: THE STATS (RIGHT 15) [15 - 35s] ---
-        station2_pos = RIGHT * 15
-        self.play(self.camera.frame.animate.move_to(station2_pos), run_time=3, rate_func=rate_functions.ease_in_out_cubic)
-        
-        stat_title = Text("SCALE & MASS", font="sans-serif", weight=BOLD, color=YELLOW).scale(1.5).move_to(station2_pos + UP*3)
-        self.play(Write(stat_title), run_time=1)
-        
-        # Flash numbers rapidly
-        num1 = Text("2,300,000", font="sans-serif", color=WHITE, weight=BOLD).scale(2).move_to(station2_pos + UP*1)
-        lbl1 = Text("STONE BLOCKS", font="sans-serif", color=LIGHT_GREY).scale(0.8).next_to(num1, DOWN)
-        
-        self.play(FadeIn(num1, shift=UP), run_time=1)
-        self.play(Write(lbl1), run_time=1)
-        self.wait(1)
-        
-        block = Square(side_length=2, color=BLUE, fill_opacity=0.7).move_to(station2_pos + DOWN*2)
-        weight_txt = Text("2.5 to 15 TONS", font="sans-serif", color=RED, weight=BOLD).scale(0.8).move_to(block.get_center())
-        
-        self.play(DrawBorderThenFill(block), run_time=1.5)
+        self.play(Create(block), Create(grid_block), run_time=2)
         self.play(Write(weight_txt), run_time=1)
-        self.play(Indicate(block, color=RED, scale_factor=1.2), run_time=1.5)
-        self.play(num1.animate.set_color(YELLOW), run_time=1)
-        self.wait(2)
+        
+        # Rotating geometric rings around the block to keep it dynamic
+        ring1 = Ellipse(width=5, height=1.5, color=TEAL).move_to(station_2)
+        ring2 = Ellipse(width=1.5, height=5, color=GREEN).move_to(station_2)
+        ring1.add_updater(lambda m, dt: m.rotate(dt * 1))
+        ring2.add_updater(lambda m, dt: m.rotate(-dt * 1.5))
+        self.add(ring1, ring2)
+        
+        self.camera.frame.add_updater(lambda m, dt: m.scale(1 + 0.002 * dt))
+        self.wait(phase_time - 4)
 
-        # --- STATION 3: THE TRANSPORT (DOWN 12) [35 - 55s] ---
-        station3_pos = station2_pos + DOWN * 12
-        self.play(self.camera.frame.animate.move_to(station3_pos), run_time=3)
+        # --- CHAPTER 3: ORION ALIGNMENT (UP 15) ---
+        station_3 = station_2 + UP * 15
+        self.camera.frame.clear_updaters()
+        self.play(self.camera.frame.animate.move_to(station_3), run_time=3)
         
-        trans_title = Text("RIVER TRANSPORT", font="sans-serif", weight=BOLD, color=BLUE_B).scale(1.5).move_to(station3_pos + UP*3)
-        self.play(FadeIn(trans_title, shift=DOWN), run_time=1)
+        c2_title = Text("CHAPTER 2: COSMIC ALIGNMENT", font="sans-serif", color=BLUE_B, weight=BOLD).move_to(station_3 + UP*3.5)
+        self.play(FadeIn(c2_title), run_time=1)
         
-        # Drawing the Nile
-        river = FunctionGraph(lambda x: 0.5 * np.sin(x*2), x_range=[-5, 5], color=BLUE, stroke_width=25).move_to(station3_pos)
-        self.play(Create(river), run_time=2)
+        # Draw 3 Pyramids
+        p1 = Triangle(color=GOLD, stroke_width=5).scale(1.5).move_to(station_3 + LEFT*3 + DOWN*1)
+        p2 = Triangle(color=GOLD, stroke_width=5).scale(1.2).move_to(station_3 + DOWN*1)
+        p3 = Triangle(color=GOLD, stroke_width=5).scale(0.8).move_to(station_3 + RIGHT*2.5 + DOWN*0.5)
+        self.play(Create(p1), Create(p2), Create(p3), run_time=2)
         
-        # Boat moving
-        boat = Rectangle(width=1, height=0.4, color=DARK_BROWN, fill_opacity=1).move_to(river.point_from_proportion(0))
-        boat_block = Square(side_length=0.4, color=LIGHT_GREY, fill_opacity=1).next_to(boat, UP, buff=0)
-        boat_group = VGroup(boat, boat_block)
+        # Draw Orion Stars
+        s1 = Dot(radius=0.15, color=WHITE).move_to(p1.get_top() + UP*2)
+        s2 = Dot(radius=0.15, color=WHITE).move_to(p2.get_top() + UP*2)
+        s3 = Dot(radius=0.15, color=WHITE).move_to(p3.get_top() + UP*2)
+        lines = VGroup(DashedLine(s1, p1.get_top()), DashedLine(s2, p2.get_top()), DashedLine(s3, p3.get_top())).set_color(BLUE)
         
-        self.play(FadeIn(boat_group), run_time=1)
-        self.play(MoveAlongPath(boat_group, river), run_time=4, rate_func=linear)
-        self.play(Flash(boat_group, color=YELLOW), run_time=1)
+        self.play(FadeIn(VGroup(s1, s2, s3)), Create(lines), run_time=2)
         
-        # Flash a question
-        q_mark = Text("HOW?", font="sans-serif", weight=BOLD, color=RED).scale(3).move_to(station3_pos)
-        self.play(FadeIn(q_mark, scale=0.5), run_time=1)
-        self.play(q_mark.animate.scale(1.5).set_opacity(0), run_time=1.5)
-        self.wait(1.5)
+        # Pulsing stars updater
+        def pulse_stars(m, dt):
+            m.set_opacity(0.5 + 0.5 * np.sin(self.renderer.time * 5))
+        s1.add_updater(pulse_stars)
+        s2.add_updater(pulse_stars)
+        s3.add_updater(pulse_stars)
+        
+        self.camera.frame.add_updater(lambda m, dt: m.shift(UP * dt * 0.1))
+        self.wait(phase_time - 5)
 
-        # --- STATION 4: MATH & ALIENS (LEFT 15) [55 - 75s] ---
-        station4_pos = station3_pos + LEFT * 15
-        self.play(self.camera.frame.animate.move_to(station4_pos), run_time=3)
+        # --- CHAPTER 4: SECRET CHAMBERS (LEFT 20) ---
+        station_4 = station_3 + LEFT * 20
+        self.camera.frame.clear_updaters()
+        self.play(self.camera.frame.animate.move_to(station_4), run_time=3)
         
-        math_title = Text("PRECISION ENGINEERING", font="sans-serif", weight=BOLD, color=WHITE).scale(1.2).move_to(station4_pos + UP*3)
-        self.play(Write(math_title), run_time=1)
+        c3_title = Text("CHAPTER 3: THE INTERIOR", font="sans-serif", color=PURPLE, weight=BOLD).move_to(station_4 + UP*3.5)
+        self.play(Write(c3_title), run_time=1)
         
-        # Wireframe Pyramid
-        base = Triangle(color=GOLD, stroke_width=4).scale(2.5).move_to(station4_pos + DOWN*1)
-        center_line = DashedLine(base.get_top(), base.get_bottom(), color=WHITE)
-        angle_arc = Angle(Line(base.get_bottom(), base.get_right()), Line(base.get_bottom(), base.get_top()), radius=0.8, color=RED)
-        angle_txt = Text("51.5°", font="sans-serif", color=YELLOW).scale(0.7).next_to(angle_arc, UR, buff=0.1)
+        # Draw a complex cross-section
+        cross_section = Triangle(color=WHITE).scale(3).move_to(station_4)
+        tunnel = Line(cross_section.get_bottom() + LEFT*2 + UP*1, cross_section.get_center(), color=RED, stroke_width=6)
+        kings_chamber = Rectangle(width=1, height=0.5, color=YELLOW, fill_opacity=1).move_to(cross_section.get_center() + UP*0.5)
+        queens_chamber = Rectangle(width=0.8, height=0.4, color=BLUE, fill_opacity=1).move_to(cross_section.get_center() + DOWN*0.5)
         
-        self.play(Create(base), run_time=2)
-        self.play(Create(center_line), run_time=1)
-        self.play(Create(angle_arc), Write(angle_txt), run_time=1.5)
+        self.play(Create(cross_section), run_time=1.5)
+        self.play(Create(tunnel), run_time=1)
+        self.play(FadeIn(kings_chamber), FadeIn(queens_chamber), run_time=1)
         
-        # Orion Constellation overlay flash
-        stars = VGroup(*[Dot(radius=0.1, color=BLUE_A).move_to(station4_pos + pos) for pos in [UP*2+LEFT*2, UP*1+LEFT*0.5, ORIGIN]])
-        star_lines = VGroup(Line(stars[0], stars[1]), Line(stars[1], stars[2])).set_color(BLUE_C).set_opacity(0.5)
+        # Holographic scanning line moving up and down the pyramid
+        scan_line = Line(LEFT*4, RIGHT*4, color=GREEN).move_to(station_4 + DOWN*2)
+        scan_line.add_updater(lambda m, dt: m.set_y(station_4[1] - 2 + 4 * abs(np.sin(self.renderer.time * 0.5))))
+        self.add(scan_line)
         
-        self.play(FadeIn(stars), Create(star_lines), run_time=2)
-        self.play(Flash(stars[0]), Flash(stars[1]), Flash(stars[2]), run_time=1)
-        self.wait(1.5)
-        self.play(FadeOut(stars), FadeOut(star_lines), run_time=1)
+        self.wait(phase_time - 4.5)
 
-        # --- STATION 5: THE OUTRO (BACK TO ORIGIN) [75 - 90s] ---
-        self.play(self.camera.frame.animate.move_to(ORIGIN).scale(1.2), run_time=4)
+        # --- CHAPTER 5: CONCLUSION & CTA (BACK TO ORIGIN) ---
+        self.play(self.camera.frame.animate.move_to(ORIGIN).scale(1.3), run_time=4)
         
-        # Swarm of mini blocks flying into the capstone
-        swarm = VGroup(*[Square(side_length=0.2, color=GOLD, fill_opacity=0.6).move_to(ORIGIN + [random.uniform(-8, 8), random.uniform(-5, 5), 0]) for _ in range(40)])
-        self.play(FadeIn(swarm), run_time=1)
+        cta_text = Text("SUBSCRIBE FOR MORE MYSTERIES", font="sans-serif", weight=BOLD, color=RED).scale(1.2).move_to(DOWN*3.5)
+        self.play(Write(cta_text), run_time=2)
         
-        capstone_pos = pyramid_img.get_top() + DOWN*0.5
-        self.play(
-            *[s.animate.move_to(capstone_pos).set_opacity(0) for s in swarm],
-            run_time=2, rate_func=rate_functions.ease_in_expo
-        )
+        # Make the original pyramid glow heavily
+        glow = img.copy().set_color(GOLD).set_opacity(0.4)
+        self.add(glow)
+        glow.add_updater(lambda m, dt: m.scale(1.001).set_opacity(m.get_fill_opacity() * 0.99))
         
-        # Glowing Capstone
-        capstone = Triangle(color=YELLOW, fill_opacity=1).scale(0.5).move_to(capstone_pos)
-        glow = Circle(radius=2, color=YELLOW, fill_opacity=0.2).move_to(capstone_pos)
+        self.camera.frame.add_updater(lambda m, dt: m.scale(1 + 0.005 * dt))
+        self.wait(phase_time - 6)
         
-        self.play(FadeIn(capstone), FadeIn(glow), run_time=1.5)
-        self.play(glow.animate.scale(3).set_opacity(0), run_time=1.5)
-        
-        final_text = Text("STILL A MYSTERY.", font="sans-serif", weight=BOLD, color=WHITE).scale(2).move_to(DOWN*3)
-        self.play(Write(final_text), run_time=2)
-        
-        # Final pull out
-        self.play(self.camera.frame.animate.scale(1.5), run_time=3)
-        self.wait(1)
-        
+        # Final fade out
         self.play(FadeOut(Group(*self.mobjects)), run_time=2)
