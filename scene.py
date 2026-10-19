@@ -93,7 +93,7 @@ class SpaceMystery(MovingCameraScene):
         self.play(
             self.camera.frame.animate.scale(0.05).move_to(bh_group.get_center()),
             run_time=5,
-            rate_func=ease_in_sine
+            rate_func=rate_functions.ease_in_sine
         )
         
         self.play(Write(singularity_text), run_time=1)
