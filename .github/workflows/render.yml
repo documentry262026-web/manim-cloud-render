@@ -1,10 +1,10 @@
 name: Render Vertical Space Mystery
 
 on:
-  workflow_dispatch: # Allows you to manually trigger the render
+  workflow_dispatch:
   push:
     paths:
-      - 'scene.py'   # Automatically runs when you save changes to scene.py
+      - 'scene.py'
 
 jobs:
   render:
@@ -35,5 +35,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: space-mystery-short
-          path: media/videos/scene/1080p60/output.mp4
+          path: media/videos/**/*.mp4
           retention-days: 3
